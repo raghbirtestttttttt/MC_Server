@@ -71,24 +71,37 @@ function executeCommand(command, callback) {
   });
 }
 
+// Function to check if sudo is required
+function checkSudo(callback) {
+  exec('which sudo', (error, stdout, stderr) => {
+    if (error || stderr) {
+      console.log('sudo not found, running commands as root...');
+      callback('');
+    } else {
+      console.log('sudo found, using sudo for commands...');
+      callback('sudo ');
+    }
+  });
+}
+
 // Function to install the latest Java
-function installJava(callback) {
+function installJava(sudoCmd, callback) {
   console.log('Updating package list...');
-  const updateCommand = 'sudo apt update';
+  const updateCommand = `${sudoCmd}apt update`;
 
   executeCommand(updateCommand, () => {
     console.log('Adding Java PPA...');
-    const addPPACommand = 'sudo add-apt-repository -y ppa:linuxuprising/java';
+    const addPPACommand = `${sudoCmd}add-apt-repository -y ppa:linuxuprising/java`;
 
     executeCommand(addPPACommand, () => {
       console.log('Updating package list again...');
       executeCommand(updateCommand, () => {
         console.log('Accepting Oracle license...');
-        const acceptLicenseCommand = 'echo oracle-java18-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections';
+        const acceptLicenseCommand = `echo oracle-java18-installer shared/accepted-oracle-license-v1-2 select true | ${sudoCmd}/usr/bin/debconf-set-selections`;
 
         executeCommand(acceptLicenseCommand, () => {
           console.log('Installing the latest Java...');
-          const javaInstallCommand = 'sudo apt install -y oracle-java18-installer';
+          const javaInstallCommand = `${sudoCmd}apt install -y oracle-java18-installer`;
 
           executeCommand(javaInstallCommand, () => {
             console.log('Java installed successfully.');
@@ -112,7 +125,9 @@ function runServer() {
 
 // Main function to orchestrate the steps
 function main() {
-  installJava(runServer);
+  checkSudo((sudoCmd) => {
+    installJava(sudoCmd, runServer);
+  });
 }
 
 // Start the process
